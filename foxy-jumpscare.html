@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DO NOT MOVE THE MOUSE OUTSIDE THE BOX</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: #000;
+            color: white;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .jumpscare {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        .jumpscare video {
+            display: none;
+        }
+
+        .jumpscare.active video {
+            display: block;
+        }
+
+        /* Start Screen */
+        .start-screen {
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100vw;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 10;
+        }
+
+        .title {
+            font-size: 4rem;
+            font-weight: bold;
+            color: #ff0000;
+            text-shadow: 0 0 20px #ff0000, 0 0 40px #ff0000, 0 0 60px #ff0000;
+            margin-bottom: 2rem;
+            animation: glow 2s ease-in-out infinite alternate;
+            max-width: 90vw;
+            word-wrap: break-word;
+            text-align: center;
+        }
+
+        @keyframes glow {
+            from { text-shadow: 0 0 20px #ff0000, 0 0 40px #ff0000, 0 0 60px #ff0000; }
+            to { text-shadow: 0 0 10px #ff0000, 0 0 20px #ff0000, 0 0 30px #ff0000; }
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            color: #ff6666;
+            margin-bottom: 3rem;
+            opacity: 0.8;
+        }
+
+        .start-btn {
+            padding: 1rem 2rem;
+            font-size: 1.5rem;
+            background: #ff0000;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
+        }
+
+        .start-btn:hover {
+            background: #cc0000;
+            transform: scale(1.05);
+            box-shadow: 0 0 30px rgba(255, 0, 0, 0.8);
+        }
+
+        /* Countdown Screen */
+        .countdown-screen {
+            text-align: center;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .countdown-number {
+            font-size: 8rem;
+            font-weight: bold;
+            color: #ff0000;
+            text-shadow: 0 0 30px #ff0000;
+            margin-bottom: 1rem;
+            animation: pulse 1s ease-in-out infinite;
+        }
+
+        .countdown-text {
+            font-size: 1.5rem;
+            color: #ff6666;
+        }
+
+        /* Game Screen */
+        .game-screen {
+            display: none;
+        }
+
+        .safe-zone {
+            width: 400px;
+            height: 300px;
+            background: #ff0000;
+            border: 4px solid #ffffff;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 20px;
+            box-shadow: 0 0 50px rgba(255, 0, 0, 0.8);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 50px rgba(255, 0, 0, 0.8); }
+            50% { box-shadow: 0 0 100px rgba(255, 0, 0, 1); }
+        }
+
+        .warning-text {
+            font-size: 18px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            margin-bottom: 20px;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.7; }
+        }
+
+        .instruction {
+            font-size: 14px;
+            color: #ffff00;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+        }
+
+        .jumpscare.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .foxy {
+            width: 80vw;
+            height: 60vh;
+            background: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxjaXJjbGUgY3g9IjEwMCIgY3k9IjEwMCIgcj0iMTAwIiBmaWxsPSIjZmYwMDAwIi8+CjxjaXJjbGUgY3g9IjgwIiBjeT0iODAiIHI9IjIwIiBmaWxsPSIjMDAwIi8+CjxjaXJjbGUgY3g9IjEyMCIgY3k9IjgwIiByPSIyMCIgZmlsbD0iIzAwMCIvPjxwYXRoIGQ9Ik0xMDAgMTIwIHEtMjAgMjAgLTIwIDMwIiBzdHJva2U9IiMwMDAiIHN0cm9rZS13aWR0aD0iOCIgZmlsbD0ibm9uZSIvPjx0ZXh0IHg9IjEwMCIgeT0iMTgwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmIiBmb250LXNpemU9IjI0IiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiPkZPWFZIHRHRU9USSEhPC90ZXh0Pgo8L3N2Zz4=') no-repeat center center;
+            background-size: contain;
+            animation: jumpscareAnim 0.5s ease-out;
+            margin-bottom: 2rem;
+        }
+
+        .death-text {
+            font-size: 4rem;
+            font-weight: bold;
+            color: #ff0000;
+            text-shadow: 0 0 30px #ff0000;
+            margin-bottom: 2rem;
+            animation: blink 0.5s ease-in-out infinite alternate;
+        }
+
+        .restart-btn {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 1rem 2rem;
+            font-size: 1.5rem;
+            background: #ff0000;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
+            z-index: 30;
+            display: none;
+        }
+
+        .restart-btn:hover {
+            background: #cc0000;
+            transform: translateX(-50%) scale(1.05);
+            box-shadow: 0 0 30px rgba(255, 0, 0, 0.8);
+        }
+    </style>
+</head>
+<body>
+        <div class="start-screen" id="startScreen">
+            <div class="title">DO NOT MOVE THE MOUSE OUTSIDE THE BOX</div>
+            <button class="start-btn" onclick="startGame()">START GAME</button>
+        </div>
+
+        <div class="jumpscare" id="jumpscare">
+            <video id="foxyVideo" style="width: 100vw; height: 100vh; object-fit: cover;">
+                <source src="jumpscare.mp4" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+        </div>
+
+        <button class="restart-btn" id="restartBtn" onclick="restartGame()">BACK TO START</button>
+
+        <div class="countdown-screen" id="countdownScreen">
+            <div class="countdown-number" id="countdownNumber">3</div>
+            <div class="countdown-text">Place the Mouse inside the box</div>
+        </div>
+
+        <div class="game-screen" id="gameScreen">
+            <div class="safe-zone" id="safeZone">
+                <div class="warning-text">⚠️ WARNING ⚠️</div>
+                <div class="instruction">
+                    DO NOT MOVE THE MOUSE OUTSIDE THE BOX<br>
+                    <small>(Foxy is watching...)</small>
+                </div>
+            </div>
+        </div>
+
+    <script>
+        const startScreen = document.getElementById('startScreen');
+        const countdownScreen = document.getElementById('countdownScreen');
+        const gameScreen = document.getElementById('gameScreen');
+        const jumpscare = document.getElementById('jumpscare');
+        const countdownNumber = document.getElementById('countdownNumber');
+        const safeZone = document.getElementById('safeZone');
+        const foxyVideo = document.getElementById('foxyVideo');
+        const restartBtn = document.getElementById('restartBtn');
+
+        let gameActive = false;
+
+        function startGame() {
+            startScreen.style.display = 'none';
+            countdownScreen.style.display = 'flex';
+
+            let count = 3;
+            countdownNumber.textContent = count;
+
+            const countdownInterval = setInterval(() => {
+                count--;
+                if (count > 0) {
+                    countdownNumber.textContent = count;
+                } else {
+                    clearInterval(countdownInterval);
+                    countdownScreen.style.display = 'none';
+                    gameScreen.style.display = 'block';
+                    gameActive = true;
+                }
+            }, 1000);
+        }
+
+        safeZone.addEventListener('mouseleave', () => {
+            if (gameActive) {
+                gameActive = false;
+                gameScreen.style.display = 'none';
+                jumpscare.style.display = 'flex';
+                jumpscare.classList.add('active');
+
+                // Play the jumpscare video
+                foxyVideo.currentTime = 0;
+                foxyVideo.style.display = 'block';
+                foxyVideo.play().catch(e => console.log('Video autoplay blocked'));
+
+                // Auto-restart to start menu when video ends
+                const autoRestart = () => {
+                    restartGame();
+                    foxyVideo.removeEventListener('ended', autoRestart);
+                };
+
+                foxyVideo.addEventListener('ended', autoRestart);
+            }
+        });
+
+        function restartGame() {
+            gameActive = false;
+            jumpscare.style.display = 'none';
+            jumpscare.classList.remove('active');
+            foxyVideo.style.display = 'none';
+            restartBtn.style.display = 'none';
+            gameScreen.style.display = 'none';
+            countdownScreen.style.display = 'none';
+            startScreen.style.display = 'flex';
+
+            // Reset video
+            foxyVideo.pause();
+            foxyVideo.currentTime = 0;
+        }
+
+        // Prevent context menu and selection
+        document.addEventListener('contextmenu', e => e.preventDefault());
+        document.addEventListener('selectstart', e => e.preventDefault());
+    </script>
+</body>
+</html>
