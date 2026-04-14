@@ -46,6 +46,21 @@ function getFilteredSales() {
     });
 }
 
+function getCurrentPriceByItemId(itemId, fallbackPrice = 0) {
+    const inventoryItem = items.find((entry) => String(entry.id) === String(itemId));
+    if (!inventoryItem) return Number(fallbackPrice) || 0;
+    return Number(inventoryItem.price) || 0;
+}
+
+function computeSaleTotalFromCurrentPrices(sale) {
+    const soldItems = Array.isArray(sale.items) ? sale.items : [];
+    return soldItems.reduce((sum, soldItem) => {
+        const qty = Number(soldItem.quantity) || 0;
+        const unitPrice = getCurrentPriceByItemId(soldItem.id, soldItem.price);
+        return sum + (unitPrice * qty);
+    }, 0);
+}
+
 async function createClient() {
     const config = typeof SUPABASE_CONFIG !== 'undefined'
         ? SUPABASE_CONFIG
@@ -525,12 +540,13 @@ function renderSalesReport() {
         const dateLabel = new Date(sale.created_at).toLocaleString();
         const itemCount = Array.isArray(sale.items) ? sale.items.length : 0;
         const userLabel = sale.user_id ? String(sale.user_id).slice(0, 8) : 'N/A';
+        const recalculatedTotal = computeSaleTotalFromCurrentPrices(sale);
         return `
             <tr>
                 <td>${dateLabel}</td>
                 <td>${userLabel}</td>
                 <td>${itemCount}</td>
-                <td>${formatCurrency(sale.total)}</td>
+                <td>${formatCurrency(recalculatedTotal)}</td>
                 <td><button class="view-items-btn" data-action="view-sale-items" data-sale-id="${sale.id}">View</button></td>
             </tr>
         `;
@@ -570,14 +586,17 @@ function renderSaleItems(saleId) {
     const rows = soldItems.map((item) => {
         const name = item.name || 'Unnamed';
         const qty = Number(item.quantity) || 0;
-        const lineTotal = (Number(item.price) || 0) * qty;
+        const currentUnitPrice = getCurrentPriceByItemId(item.id, item.price);
+        const lineTotal = currentUnitPrice * qty;
         return `<li><span>${name} x${qty}</span><strong>${formatCurrency(lineTotal)}</strong></li>`;
     }).join('');
+
+    const updatedTotal = computeSaleTotalFromCurrentPrices(sale);
 
     viewer.innerHTML = `
         <h4>Items Sold - ${new Date(sale.created_at).toLocaleString()}</h4>
         <ul>${rows}</ul>
-        <p style="margin-top: 0.45rem;"><strong>Sale Total:</strong> ${formatCurrency(sale.total)}</p>
+        <p style="margin-top: 0.45rem;"><strong>Sale Total (Current Prices):</strong> ${formatCurrency(updatedTotal)}</p>
     `;
 
     document.getElementById('saleDetailModal').style.display = 'flex';
