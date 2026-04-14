@@ -20,6 +20,8 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            -webkit-text-size-adjust: 100%;
+            touch-action: manipulation;
         }
 
         .jumpscare {
@@ -80,6 +82,7 @@
             color: #ff6666;
             margin-bottom: 3rem;
             opacity: 0.8;
+            max-width: 92vw;
         }
 
         .start-btn {
@@ -92,6 +95,7 @@
             cursor: pointer;
             transition: all 0.3s ease;
             box-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
+            min-height: 48px;
         }
 
         .start-btn:hover {
@@ -131,8 +135,8 @@
         }
 
         .safe-zone {
-            width: 400px;
-            height: 300px;
+            width: min(400px, 90vw);
+            height: min(300px, 58vh);
             background: #ff0000;
             border: 4px solid #ffffff;
             border-radius: 10px;
@@ -152,7 +156,7 @@
         }
 
         .warning-text {
-            font-size: 18px;
+            font-size: clamp(1rem, 4vw, 18px);
             font-weight: bold;
             color: white;
             text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
@@ -166,7 +170,7 @@
         }
 
         .instruction {
-            font-size: 14px;
+            font-size: clamp(0.82rem, 3.3vw, 14px);
             color: #ffff00;
             text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
         }
@@ -186,7 +190,7 @@
         }
 
         .death-text {
-            font-size: 4rem;
+            font-size: clamp(2rem, 12vw, 4rem);
             font-weight: bold;
             color: #ff0000;
             text-shadow: 0 0 30px #ff0000;
@@ -210,12 +214,87 @@
             box-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
             z-index: 30;
             display: none;
+            min-height: 48px;
         }
 
         .restart-btn:hover {
             background: #cc0000;
             transform: translateX(-50%) scale(1.05);
             box-shadow: 0 0 30px rgba(255, 0, 0, 0.8);
+        }
+
+        @media (min-width: 769px) and (max-width: 1180px) {
+            .title {
+                font-size: clamp(2.6rem, 6.2vw, 3.6rem);
+            }
+
+            .safe-zone {
+                width: min(540px, 80vw);
+                height: min(360px, 52vh);
+            }
+
+            .countdown-number {
+                font-size: clamp(4rem, 13vw, 7rem);
+            }
+        }
+
+        @media (min-width: 700px) and (max-width: 1180px) and (orientation: landscape) {
+            .title {
+                font-size: clamp(2.2rem, 5.5vw, 3.2rem);
+                margin-bottom: 0.8rem;
+            }
+
+            .safe-zone {
+                width: min(520px, 82vw);
+                height: min(290px, 60vh);
+                padding: 16px;
+            }
+
+            .countdown-number {
+                font-size: clamp(3.2rem, 11vw, 5.6rem);
+            }
+
+            .start-btn,
+            .restart-btn {
+                font-size: 1rem;
+                padding: 0.75rem 1rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .title {
+                font-size: clamp(2rem, 8.5vw, 3rem);
+                margin-bottom: 1rem;
+            }
+
+            .subtitle {
+                margin-bottom: 1.4rem;
+                font-size: 1rem;
+            }
+
+            .start-btn,
+            .restart-btn {
+                width: min(320px, 85vw);
+                font-size: 1.1rem;
+                padding: 0.9rem 1rem;
+            }
+
+            .countdown-number {
+                font-size: clamp(3.2rem, 20vw, 6rem);
+            }
+
+            .countdown-text {
+                font-size: 1rem;
+                padding: 0 1rem;
+                text-align: center;
+            }
+        }
+
+        @media (max-width: 420px) {
+            .safe-zone {
+                height: 52vh;
+                padding: 14px;
+            }
         }
     </style>
 </head>
@@ -261,6 +340,27 @@
 
         let gameActive = false;
 
+        function triggerJumpscare() {
+            if (!gameActive) return;
+            gameActive = false;
+            gameScreen.style.display = 'none';
+            jumpscare.style.display = 'flex';
+            jumpscare.classList.add('active');
+
+            // Play the jumpscare video
+            foxyVideo.currentTime = 0;
+            foxyVideo.style.display = 'block';
+            foxyVideo.play().catch(e => console.log('Video autoplay blocked'));
+
+            // Auto-restart to start menu when video ends
+            const autoRestart = () => {
+                restartGame();
+                foxyVideo.removeEventListener('ended', autoRestart);
+            };
+
+            foxyVideo.addEventListener('ended', autoRestart);
+        }
+
         function startGame() {
             startScreen.style.display = 'none';
             countdownScreen.style.display = 'flex';
@@ -281,27 +381,21 @@
             }, 1000);
         }
 
-        safeZone.addEventListener('mouseleave', () => {
-            if (gameActive) {
-                gameActive = false;
-                gameScreen.style.display = 'none';
-                jumpscare.style.display = 'flex';
-                jumpscare.classList.add('active');
+        safeZone.addEventListener('mouseleave', triggerJumpscare);
 
-                // Play the jumpscare video
-                foxyVideo.currentTime = 0;
-                foxyVideo.style.display = 'block';
-                foxyVideo.play().catch(e => console.log('Video autoplay blocked'));
-
-                // Auto-restart to start menu when video ends
-                const autoRestart = () => {
-                    restartGame();
-                    foxyVideo.removeEventListener('ended', autoRestart);
-                };
-
-                foxyVideo.addEventListener('ended', autoRestart);
+        // Mobile support: trigger jumpscare if touch moves outside the safe zone.
+        safeZone.addEventListener('touchmove', (event) => {
+            if (!gameActive || !event.touches || event.touches.length === 0) return;
+            const touch = event.touches[0];
+            const rect = safeZone.getBoundingClientRect();
+            const inside = touch.clientX >= rect.left &&
+                touch.clientX <= rect.right &&
+                touch.clientY >= rect.top &&
+                touch.clientY <= rect.bottom;
+            if (!inside) {
+                triggerJumpscare();
             }
-        });
+        }, { passive: true });
 
         function restartGame() {
             gameActive = false;
